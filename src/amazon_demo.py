@@ -168,9 +168,10 @@ print(system_prompt)
 
 from openai import OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+embeddings_model = "text-embedding-3-small"
 
 # Define the entities to look for
-def define_query(prompt, model="gpt-4o-mini"):
+def define_query(prompt, model="gpt-4o"):
     completion = client.chat.completions.create(
         model=model,
         temperature=0,
@@ -208,49 +209,59 @@ def create_embedding(text):
 
 
 # The threshold defines how closely related words should be. Adjust the threshold to return more or less results
-def create_query(text, threshold=0.81):
-    query_data = json.loads(text)
-    # Creating embeddings
-    embeddings_data = []
-    for key, val in query_data.items():
-        if key != 'product':
-            embeddings_data.append(f"${key}Embedding AS {key}Embedding")
-    query = "WITH " + ",\n".join(e for e in embeddings_data)
+def create_query(text: str, threshold: float = 0.81) -> str:
+    # Ensure the input is a string and properly parsed
+    if isinstance(text, str):
+        query_data = json.loads(text)
+    else:
+        raise TypeError("The input must be a valid JSON string")
+
+    # Prepare embedding data
+    embeddings_data = [f"${key}Embedding AS {key}Embedding" for key, _ in query_data.items() if key != 'product']
+    query = "WITH " + ",\n".join(embeddings_data)
+
     # Matching products to each entity
     query += "\nMATCH (p:Product)\nMATCH "
-    match_data = []
-    for key, val in query_data.items():
-        if key != 'product':
-            relationship = entity_relationship_match[key]
-            match_data.append(f"(p)-[:{relationship}]->({key}Var:{key})")
-    query += ",\n".join(e for e in match_data)
-    similarity_data = []
-    for key, val in query_data.items():
-        if key != 'product':
-            similarity_data.append(f"gds.similarity.cosine({key}Var.embedding, ${key}Embedding) > {threshold}")
-    query += "\nWHERE "
-    query += " AND ".join(e for e in similarity_data)
+    match_data = [f"(p)-[:{entity_relationship_match[key]}]->({key}Var:{key})" for key in query_data if key != 'product']
+    query += ",\n".join(match_data)
+
+    # Calculate cosine similarity using vector.similarity.cosine
+    similarity_data = [
+        f"vector.similarity.cosine({key}Var.embedding, ${key}Embedding) > {threshold}"
+        for key in query_data if key != 'product'
+    ]
+    query += "\nWHERE " + " AND ".join(similarity_data)
     query += "\nRETURN p"
     return query
 
-def query_graph(response):
-    embeddingsParams = {}
-    query = create_query(response)
+def query_graph(response: str):
+    # Ensure the input is a string and properly parsed
+    if not isinstance(response, str):
+        raise TypeError("The response input must be a JSON string")
+
+    # Generate the query using create_query
+    query = create_query(response, 0)
     query_data = json.loads(response)
+
+    # Prepare embedding parameters
+    embeddings_params = {}
     for key, val in query_data.items():
-        embeddingsParams[f"{key}Embedding"] = create_embedding(val)
-    result = graph.query(query, params=embeddingsParams)
+        embeddings_params[f"{key}Embedding"] = create_embedding(val)
+
+    # Execute the query
+    result = graph.query(query, params=embeddings_params)
     return result
 
+# Example usage
 example_response = '''{
     "category": "clothes",
     "color": "blue",
     "age_group": "adults"
 }'''
 
-#%%
-# this part does not work with the gds. 
+# Query the graph with the example response
 result = query_graph(example_response)
+print(result)
 # %%
 # find similar items from graph database: 
 # Adjust the relationships_threshold to return products that have more or less relationships in common
@@ -333,25 +344,41 @@ def query_db(params):
     return matches 
 
 
-def similarity_search(prompt, threshold=0.8):
+def similarity_search(prompt: str, threshold: float = 0.5) -> list:
+
     matches = []
+
+    # Generate the embedding for the given prompt
     embedding = create_embedding(prompt)
+
+    # Neo4j query using native vector similarity, including the score in the RETURN statement
     query = '''
             WITH $embedding AS inputEmbedding
             MATCH (p:Product)
-            WHERE gds.similarity.cosine(inputEmbedding, p.embedding) > $threshold
-            RETURN p
+            WITH p, vector.similarity.cosine(inputEmbedding, p.embedding) AS similarity
+            WHERE similarity > $threshold
+            RETURN p, similarity
             '''
+
+    # Execute the query
     result = graph.query(query, params={'embedding': embedding, 'threshold': threshold})
+
+    # Parse the result and collect the matched products with similarity scores
     for r in result:
         product_id = r['p']['id']
         matches.append({
             "id": product_id,
-            "name":r['p']['name']
+            "name": r['p']['name'],
+            "similarity": r['similarity']
         })
+
     return matches
 
-
+# Example usage
 prompt_similarity = "I'm looking for nice curtains"
 print(similarity_search(prompt_similarity))
+
 # %%
+
+
+

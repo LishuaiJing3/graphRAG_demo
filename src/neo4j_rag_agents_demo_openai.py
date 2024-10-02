@@ -4,7 +4,7 @@ from src.utils.graph_helpers import connect_to_graph,  execute_query
 from src.utils.vector_helpers import create_vector_index, load_vector_index, similarity_search
 from src.utils.qa_helpers import create_retrieval_qa, perform_qa
 from src.utils.agent_helpers import create_cypher_chain, initialize_tools, initialize_mrkl_agent
-from src.graph_data_import import import_graph_data_sample
+from utils.graph_data_import import import_graph_data_sample
 
 # Load configuration
 config = load_config()

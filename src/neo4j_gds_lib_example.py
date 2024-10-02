@@ -1,4 +1,4 @@
-from neo4j_service import GDSConnector, GraphOperations, NodeOperations
+from src.utils.neo4j_gds_helper import GDSConnector, GraphOperations, NodeOperations
 from dotenv import load_dotenv
 import os
 
@@ -21,13 +21,13 @@ def main() -> None:
     node_ops = NodeOperations(gds)
 
     # Example 1: Delete a specific graph by name
-    graph_ops.delete_graph('entireGraph')
+    #graph_ops.delete_graph('entireGraph')
 
     # Example 2: Estimate memory for a specific graph
-    graph_ops.estimate_graph_memory('entireGraph')
+    #graph_ops.estimate_graph_memory('entireGraph')
 
     # Example 3: Project all nodes and relationships
-    graph_ops.project_all_nodes_and_relationships()
+    #graph_ops.project_all_nodes_and_relationships()
 
     # Example 4: Create an organization projection and run PageRank
     org_graph_name = graph_ops.create_organization_projection()
