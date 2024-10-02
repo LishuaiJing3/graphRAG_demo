@@ -24,7 +24,7 @@ vertexai.init(
     staging_bucket=STAGING_BUCKET,
 )
 # %%
-## this is a google demo project, thus credentials are exposed
+## this is a google demo project, credentials are exposed from google on purpose
 URI = os.getenv('NEO4J_URI', 'neo4j+s://demo.neo4jlabs.com')
 USER = os.getenv('NEO4J_USERNAME','companies')
 PASSWORD = os.getenv('NEO4J_PASSWORD','companies')
