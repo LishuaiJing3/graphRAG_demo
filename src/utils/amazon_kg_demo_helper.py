@@ -96,11 +96,6 @@ class VectorIndexManager:
                 text_node_properties=['value']
             )
 
-
-class QueryGenerator:
-    def __init__(self, config: KnowledgeGraphConfig):
-        self.config = config
-
 class QueryGenerator:
     def __init__(self, config: KnowledgeGraphConfig):
         self.config = config
@@ -194,6 +189,11 @@ class GraphOperations:
         self.graph = graph_connection
 
     def similarity_search(self, embedding: List[float], threshold: float = 0.5) -> List[Product]:
+        # Ensure the embedding is a list of floats
+        if not isinstance(embedding, list) or not all(isinstance(x, (float, int)) for x in embedding):
+            raise ValueError("Embedding must be a list of floats")
+
+        # Neo4j query using native vector similarity, including the score in the RETURN statement
         query = '''
                 WITH $embedding AS inputEmbedding
                 MATCH (p:Product)
@@ -201,15 +201,30 @@ class GraphOperations:
                 WHERE similarity > $threshold
                 RETURN p, similarity
                 '''
-        result = self.graph.query(query, {'embedding': embedding, 'threshold': threshold})
+
+        # Execute the query
+        result = self.graph.query(query, params={'embedding': embedding, 'threshold': threshold})
+
+        # Parse the result and collect the matched products with similarity scores
         return [Product(id=r['p']['id'], name=r['p']['name'], similarity=r['similarity']) for r in result]
 
-    def query_graph(self, response: Dict, query_generator: QueryGenerator):
-        query = query_generator.create_cypher_query(response)
+    def query_graph(self, response: Dict, query_generator: QueryGenerator, similarity_threshold: float):
+        print(response)
+        query = query_generator.create_cypher_query(response, similarity_threshold)
         print(query)
+
+        # Generate embeddings for all values in the response dictionary
         embeddings_params = {f"{key}Embedding": EmbeddingModel.create_embedding(value) for key, value in response.items()}
+
+        # Debug prints to verify embeddings parameters
+        for key, value in embeddings_params.items():
+            print(f"Key: {key}, Type: {type(value)}, Value: {value}")
+
+        # Execute the query with embeddings as parameters
         result = self.graph.query(query, params=embeddings_params)
+
         return result
+
 
 
 class EmbeddingModel:

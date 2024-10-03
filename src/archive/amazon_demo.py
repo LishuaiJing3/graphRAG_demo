@@ -7,6 +7,10 @@ import pandas as pd
 from dotenv import load_dotenv
 load_dotenv()
 
+from openai import OpenAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+embeddings_model = "text-embedding-3-small"
+
 #%%
 # Loading a json dataset from a file
 file_path = 'data/amazon_product_kg.json'
@@ -132,10 +136,10 @@ system_prompt = f'''
     You are a helpful agent designed to fetch information from a graph database. 
     
     The graph database links products to the following entity types:
-    {json.dumps(entity_types)}
+    {entity_types}
     
     Each link has one of the following relationships:
-    {json.dumps(relation_types)}
+    {relation_types}
 
     Depending on the user prompt, determine if it possible to answer with the graph database.
         
@@ -165,11 +169,6 @@ system_prompt = f'''
 
 print(system_prompt)
 # %%
-
-from openai import OpenAI
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-embeddings_model = "text-embedding-3-small"
-
 # Define the entities to look for
 def define_query(prompt, model="gpt-4o"):
     completion = client.chat.completions.create(
@@ -232,6 +231,7 @@ def create_query(text: str, threshold: float = 0.81) -> str:
     ]
     query += "\nWHERE " + " AND ".join(similarity_data)
     query += "\nRETURN p"
+    print(query)
     return query
 
 def query_graph(response: str):

@@ -3,3 +3,27 @@
 {'graphProperties': {}, 'nodes': {'IndustryCategory': {}, '_Bloom_Perspective_': {}, 'Organization': {}, 'Fewshot': {}, 'Country': {}, 'City': {}, 'Chunk': {}, 'Person': {}, '_Bloom_Scene_': {}, 'Article': {}}, 'relationships': {'HAS_COMPETITOR': {}, 'HAS_CHUNK': {}, 'HAS_BOARD_MEMBER': {}, 'HAS_INVESTOR': {}, '_Bloom_HAS_SCENE_': {}, 'HAS_PARENT': {}, 'MENTIONS': {}, 'HAS_CEO': {}, 'HAS_SUBSIDIARY': {}, 'HAS_CHILD': {}, 'IN_COUNTRY': {}, 'HAS_CATEGORY': {}, 'HAS_SUPPLIER': {}, 'IN_CITY': {}}}
 
 {'graphProperties': {}, 'nodes': {'IndustryCategory': {}, '_Bloom_Perspective_': {}, 'Organization': {}, 'Fewshot': {}, 'Country': {}, 'City': {}, 'Chunk': {}, 'Person': {}, '_Bloom_Scene_': {}, 'Article': {}}, 'relationships': {'HAS_COMPETITOR': {'direction': 'DIRECTED', 'properties': {}}, 'HAS_CHUNK': {'direction': 'DIRECTED', 'properties': {}}, 'HAS_BOARD_MEMBER': {'direction': 'DIRECTED', 'properties': {}}, 'HAS_INVESTOR': {'direction': 'DIRECTED', 'properties': {}}, '_Bloom_HAS_SCENE_': {'direction': 'DIRECTED', 'properties': {}}, 'HAS_PARENT': {'direction': 'DIRECTED', 'properties': {}}, 'MENTIONS': {'direction': 'DIRECTED', 'properties': {}}, 'HAS_CEO': {'direction': 'DIRECTED', 'properties': {}}, 'HAS_SUBSIDIARY': {'direction': 'DIRECTED', 'properties': {}}, 'HAS_CHILD': {'direction': 'DIRECTED', 'properties': {}}, 'IN_COUNTRY': {'direction': 'DIRECTED', 'properties': {}}, 'HAS_CATEGORY': {'direction': 'DIRECTED', 'properties': {}}, 'HAS_SUPPLIER': {'direction': 'DIRECTED', 'properties': {}}, 'IN_CITY': {'direction': 'DIRECTED', 'properties': {}}}}
+
+
+
+WITH $categoryEmbedding AS categoryEmbedding,
+$colorEmbedding AS colorEmbedding,
+$age_groupEmbedding AS age_groupEmbedding
+MATCH (p:Product)
+MATCH (p)-[:hasCategory]->(categoryVar:category),
+(p)-[:hasColor]->(colorVar:color),
+(p)-[:isFor]->(age_groupVar:age_group)
+WHERE vector.similarity.cosine(categoryVar.embedding, $categoryEmbedding) > 0 AND vector.similarity.cosine(colorVar.embedding, $colorEmbedding) > 0 AND vector.similarity.cosine(age_groupVar.embedding, $age_groupEmbedding) > 0
+RETURN p
+
+WITH $colorEmbedding AS colorEmbedding,
+$categoryEmbedding AS categoryEmbedding,
+$age_groupEmbedding AS age_groupEmbedding
+MATCH (p:Product)
+MATCH (p)-[:hasColor]->(colorVar:color),
+(p)-[:hasCategory]->(categoryVar:category),
+(p)-[:isFor]->(age_groupVar:age_group)
+WHERE vector.similarity.cosine(colorVar.embedding, $colorEmbedding) > 0.2 AND vector.similarity.cosine(categoryVar.embedding, $categoryEmbedding) > 0.2 AND vector.similarity.cosine(age_groupVar.embedding, $age_groupEmbedding) > 0.2
+RETURN p
+
+

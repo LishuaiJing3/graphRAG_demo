@@ -71,7 +71,8 @@ def main(reconstruct_kg: bool = False):
 
         # Query the graph
         print("Querying the graph based on LLM output...")
-        result = graph_operations.query_graph(entities, query_generator)
+        similarity_thrshold = 0.2
+        result = graph_operations.query_graph(entities, query_generator, similarity_thrshold)
 
         # Display results
         print("Query Results:")
