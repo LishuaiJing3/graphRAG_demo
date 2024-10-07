@@ -1,4 +1,6 @@
-# A demo of RAG with graph DB       
+# A demo of RAG with graph DB     
+
+Examples using openai, vertex AI and neo4j graphdb. 
 
 ## TODOS
 - refactor code for production grade
