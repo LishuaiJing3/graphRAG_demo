@@ -1,3 +1,4 @@
+#%%
 import os
 import json
 from typing import List, Dict
@@ -5,6 +6,7 @@ from dataclasses import dataclass
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
 from openai import OpenAI
+from src.utils.amazon_kg_demo_helper import GraphOperations, EmbeddingModel
 
 # Load environment variables
 load_dotenv()
@@ -100,52 +102,6 @@ class QueryGenerator:
         """
         return query.strip()
 
-class GraphOperations:
-    def __init__(self, driver):
-        self.driver = driver
-
-    def similarity_search(self, embedding: List[float], threshold: float = 0.5) -> List[Product]:
-        # Ensure the embedding is a list of floats
-        if not isinstance(embedding, list) or not all(isinstance(x, (float, int)) for x in embedding):
-            raise ValueError("Embedding must be a list of floats")
-
-        # Neo4j query using native vector similarity, including the score in the RETURN statement
-        query = '''
-                WITH $embedding AS inputEmbedding
-                MATCH (p:Product)
-                WITH p, vector.similarity.cosine(inputEmbedding, p.embedding) AS similarity
-                WHERE similarity > $threshold
-                RETURN p, similarity
-                '''
-
-        # Execute the query
-        with self.driver.session(database=DB_DATABASE) as session:
-            result = session.run(query, embedding=embedding, threshold=threshold)
-
-        # Parse the result and collect the matched products with similarity scores
-        return [
-            Product(
-                id=r['p']['productId'],
-                title=r['p']['title'],
-                description=r['p']['description'],
-                price_amount=r['p']['priceAmount'],
-                price_currency=r['p']['priceCurrency'],
-                similarity=r['similarity']
-            ) for r in result
-        ]
-
-    def query_graph(self, response: Dict, query_generator: QueryGenerator, similarity_threshold: float):
-        query = query_generator.create_cypher_query(response, similarity_threshold)
-        print(query)
-        with self.driver.session(database=DB_DATABASE) as session:
-            result = session.run(query)
-        return result
-
-    def run_query(self, query: str):
-        with self.driver.session(database=DB_DATABASE) as session:
-            result = session.run(query)
-        return result
-
 # Main Functionality
 entity_types = {
     "Product": "The type of item, e.g., 'jewelry', 'watch', 'ring'.",
@@ -177,20 +133,23 @@ query_generator = QueryGenerator(config)
 prompt = "Billede - Magic Magnolia (1 Part) Wide - 60 x 40 cm - Premium Print"
 
 entities = query_generator.define_query(prompt)
-
+#%%
 if entities:
-    # Use Neo4j's official driver to connect to the database
+
     driver = GraphDatabase.driver(
-        DB_URL,
-        auth=(DB_USERNAME, DB_PASSWORD)
+        os.getenv("NEO_DB_HOST_DEV"),
+        auth=(os.getenv("NEO_DB_USER_DEV"), os.getenv("NEO_DB_PASSWORD_DEV"))
     )
+
     graph_operations = GraphOperations(driver)
 
     # Generate the embedding for the given prompt
     embedding = EmbeddingModel.create_embedding(prompt)
 
     # Perform similarity search
-    print(graph_operations.similarity_search(embedding))
+    print(graph_operations.similarity_search(
+        embedding
+    ))
 
     # Query the graph
     print("Querying the graph based on LLM output...")
