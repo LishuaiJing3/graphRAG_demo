@@ -39,7 +39,7 @@ query = """
         country_code,
         embedding
     FROM
-        `gowish-develop.poc_product_categorization.sampled_graph_poc_dk_5k`
+        `project-develop.poc_inventory_categorization.sampled_graph_poc_dk_5k`
 """
 
 query_job = bigquery_client.query(query)
